@@ -12,7 +12,7 @@ from core import (
     get_signer,
     get_signature,
     get_unsigned,
-    gost_hash,
+    gost_hash, get_signature_XML,
 )
 
 app = FastAPI()
@@ -37,6 +37,7 @@ def get_certificates():
     store = certificates_store()
     certificates = {
         cert_num: certificate_info(store.Item(cert_num))
+        # + 1
         for cert_num in range(1, store.Count + 1)
     }
 
@@ -92,6 +93,10 @@ async def sign_file(
     # # path_sig.write_text(signature)
     # path_sig.write_bytes(b64decode(signature))
 
+    path_sig = Path(__file__).parent / f'temp/{file.filename}.p7s'
+    # path_sig.write_text(signature)
+    path_sig.write_bytes(b64decode(signature))
+
     return {
         'signedContent': signature,
         'filename': f'{file.filename}.p7s',
@@ -109,6 +114,9 @@ async def unsign_file(file: UploadFile):
 
     # path_unsig = Path(__file__).parent / 'temp/unsig_test.pdf'
     # path_unsig.write_bytes(b64decode(unsigned_data))
+
+    path_unsig = Path(__file__).parent / f'temp/{file.filename.replace(".p7s", "")}.pdf'
+    path_unsig.write_bytes(b64decode(unsigned_data))
 
     return {
         'Content': unsigned_data,
@@ -137,8 +145,45 @@ async def sign_hash(
             detail='The private key cannot be accessed '
                    'because the wrong PIN was presented.'
         )
+    path_sig = Path(__file__).parent / f'hash/{file.filename}.p7s'
+    # path_sig.write_text(signature)
+    path_sig.write_bytes(b64decode(signature))
 
     return {
         'signedContent': signature,
         'filename': f'{file.filename}.p7s',
+        'hash': hash_file,
+    }
+
+@app.post('/sign_XML/{cert}')
+async def sign_XML(
+        cert: int,
+        content_xml: str,
+        pin: str
+):
+
+    """
+    Создание подписи content_XML.
+    Если у ключа есть пароль, необходимо указать его.
+    Возвращает json с подписанными данными
+    и имя файла с прикрепленной подписью.
+    """
+
+    cert = certificates_store().Item(cert)
+    signer = get_signer(cert, pin)
+    try:
+        signature = get_signature_XML(content_xml, signer)
+    except Exception:
+        raise HTTPException(
+            400,
+            detail='The private key cannot be accessed '
+                   'because the wrong PIN was presented.'
+        )
+
+    path_sig = Path(__file__).parent / f'temp/content_XML_sign.xml'
+    path_sig.write_text(signature)
+
+    return {
+        'signedContent_XML': signature,
+        'filename_XML': 'content_XML_sign.xml'
     }
