@@ -4,7 +4,8 @@ from typing import Union
 import win32com.client as win32
 
 from cadescom_const import CADESCOM_CONTAINER_STORE, CAPICOM_MY_STORE, CAPICOM_STORE_OPEN_MAXIMUM_ALLOWED, \
-    CADESCOM_CADES_BES, CADESCOM_BASE64_TO_BINARY, CADESCOM_HASH_ALGORITHM_CP_GOST_3411_2012_256
+    CADESCOM_CADES_BES, CADESCOM_BASE64_TO_BINARY, CADESCOM_HASH_ALGORITHM_CP_GOST_3411_2012_256, \
+    CADESCOM_XML_SIGNATURE_TYPE_ENVELOPED, CADESCOM_XADES_BES
 
 import pythoncom
 import pywintypes
@@ -80,6 +81,13 @@ def get_signature(file, signer):
     signed_data.Content = b64encode(file).decode()
     return signed_data.SignCades(signer, CADESCOM_CADES_BES)
 
+def get_signature_XML(content_XML, signer):
+    """Подпись content_XML."""
+    pythoncom.CoInitializeEx(0)
+    signed_data = win32.Dispatch("CAdESCOM.SignedXML")
+    signed_data.Content = content_XML
+    signed_data.SignatureType = CADESCOM_XML_SIGNATURE_TYPE_ENVELOPED | CADESCOM_XADES_BES
+    return signed_data.Sign(signer)
 
 def get_unsigned(signature: bytes) -> str:
     """Разподписать файл."""
