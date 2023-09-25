@@ -130,7 +130,7 @@ async def sign_hash(
     signer = get_signer(cert, pin)
     try:
         hash_file = gost_hash(await file.read())
-        signature = get_signature(hash_file, signer)
+        signature = get_signature(b64decode(hash_file), signer)
     except Exception:
         raise HTTPException(
             400,
